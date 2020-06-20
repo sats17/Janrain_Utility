@@ -4,11 +4,20 @@ from JanrainInternal.UpdateRecordsInJanrain import UpdateRecordsInJanrain
 
 if __name__ == "__main__":
 
-    ################ Global Settings #####################
-    FilePath = 'records.csv'
-    CredentialsPath = 'credentials.csv'
+    """
+    
+    """
 
-    ############### Select Methods ######################33
-    GetRecordsObj = GetRecordsFromJanrain(CredentialsPath)
+    ####################################### Global Settings #######################################################
+    RecordsFilePath = 'records.csv'
+    CredentialsFilePath = 'credentials.csv'
+
+    ####################################### Get Records  Methods ####################################################
+    GetRecordsObj = GetRecordsFromJanrain(CredentialsFilePath)
     GetRecordsObj.getCredentials()
+
+    ####################################### Update Records Methods ##################################################
+    UpdateRecordsObj = UpdateRecordsInJanrain(CredentialsFilePath)
+
+    ####################################### Delete Records Methods ##################################################
 

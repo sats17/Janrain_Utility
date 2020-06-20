@@ -12,19 +12,22 @@ Note - Quotes are mandatory for Janrain API attributes,any changes in that can c
 
 class GetRecordsCountFromJanrain:
 
-    def __init__(self, credentialsFileName):
+    def __init__(self, credentialsFilePath):
         """
         Constructor takes CSV file name as parameter and reads the CSV file
-        :param credentialsFileName:
+        :param credentialsFilePath: CSV File path that use to read and set credentials
         """
         print("Reading credentials From CSV")
-        credentialsData = pd.read_csv(credentialsFileName)
+        credentialsData = pd.read_csv(credentialsFilePath)
         self.client_id = credentialsData.client_id[0]
         self.client_secret = credentialsData.client_secret[0]
         self.URL = "https://" + credentialsData.url[0]
         self.type_name = credentialsData.type_name[0]
 
     def getCredentials(self):
+        """
+        :return: Janrain credentials
+        """
         response = {
             "client_id": self.client_id,
             "client_secret": self.client_secret,
@@ -43,8 +46,8 @@ class GetRecordsCountFromJanrain:
 
     def getCountHavingConditionIs(self, queryFilter):
         """
-        :param queryFilter:
-        :return:
+        :param queryFilter: Condition name where count have this condition
+        :return: Response of count
         """
         try:
             print("Fetching records from Janrain API -> ", self.URL)

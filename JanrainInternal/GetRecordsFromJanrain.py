@@ -1,4 +1,3 @@
-# Required Imports
 import requests
 import pandas as pd
 from JanrainInternal.CommonMethods import CommonMethods
@@ -14,19 +13,22 @@ Note - Quotes are mandatory for Janrain API attributes,any changes in that can c
 
 class GetRecordsFromJanrain:
 
-    def __init__(self, credentialsFileName):
+    def __init__(self, credentialsFilePath):
         """
         Constructor takes CSV file name as parameter and reads the CSV file
-        :param credentialsFileName:
+        :param credentialsFilePath: CSV File path that use to read and set credentials
         """
         print("Reading credentials From CSV")
-        credentialsData = pd.read_csv(credentialsFileName)
+        credentialsData = pd.read_csv(credentialsFilePath)
         self.client_id = credentialsData.client_id[0]
         self.client_secret = credentialsData.client_secret[0]
         self.URL = "https://" + credentialsData.url[0]
         self.type_name = credentialsData.type_name[0]
 
     def getCredentials(self):
+        """
+        :return: Janrain credentials
+        """
         response = {
             "client_id": self.client_id,
             "client_secret": self.client_secret,
@@ -37,10 +39,9 @@ class GetRecordsFromJanrain:
 
     def selectSingleRecordBy(self, key, key_attribute, selectAttributes):
         """
-        This function will return all data from Janrain for single user.
-        :param key_attribute:
-        :param key : It can be user email or dcsId.
-        :param  : It is the attribute name of key, e.g - email,uuid.
+        This function will return all data from Janrain for single user
+        :param key_attribute: Field name by key will be search in Janrain
+        :param key : It is the value, e.g - user email or user uuid
         :param selectAttributes: Fields that you want to fetch from janrain
         :return : return user data in json format.
         """
@@ -70,16 +71,15 @@ class GetRecordsFromJanrain:
             response = {'Message': 'Record not found in janrain'}
             return response
 
-    def selectMultipleRecordsBy(self, key_attribute, selectAttributes, timeout, searchHeader, recordsFileName):
+    def selectMultipleRecordsBy(self, key_attribute, selectAttributes, timeout, searchKeyHeaderName, filePath):
         """
         Bulk select from janrain, fetch all data from janrain and store in CSV file.
         if key not found in janrain then that data will store in another file.
-        :param searchHeader:
-        :param timeout:
-        :param selectHeader: Header name from CSV by which we can select records.
-        :param key_attribute: It is the attribute name of key, e.g - email,uuid.
+        :param filePath: CSV File path
+        :param searchKeyHeaderName: CSV Header name using that records will be read for searching in Janrain
+        :param timeout: API Timeout
+        :param key_attribute: It is the attribute name of key, e.g - email,uuid
         :param selectAttributes: Fields that you want to fetch from janrain
-        :param recordsFileName: CSV File consist records
         :return: Janrain Records Found CSV File and Janrain Records Missing CSV File
         """
 
@@ -88,7 +88,7 @@ class GetRecordsFromJanrain:
         attributes = json.dumps(selectAttributes)
 
         # Read data from CSV file
-        FileData = pd.read_csv(recordsFileName)
+        FileData = pd.read_csv(filePath)
 
         # Array for storing the Output
         Records_Founds_Arr = []
@@ -102,7 +102,7 @@ class GetRecordsFromJanrain:
         # This loop will iterate over the CSV file data.
         for row in FileData.itertuples():
 
-            csvKey = getattr(row, searchHeader)
+            csvKey = getattr(row, searchKeyHeaderName)
 
             # typeConverter will convert row.key to string
             key_value = CommonMethods.typeConverter(csvKey)
@@ -139,8 +139,8 @@ class GetRecordsFromJanrain:
         print("Generating CSV Files...\n")
 
         # Writing CSV file with desired output.
-        pd.DataFrame(Records_Founds_Arr).to_csv("Janrain_select_records_found.csv", index=False)
-        pd.DataFrame(Records_Missing_Arr).to_csv("Janrain_select_records_missing.csv", index=False)
+        pd.DataFrame(Records_Founds_Arr).to_csv("Output/Janrain_select_records_found.csv", index=False)
+        pd.DataFrame(Records_Missing_Arr).to_csv("Output/Janrain_select_records_missing.csv", index=False)
 
         Response = {
             'Total_Record_Found_In_Janrain': {
@@ -158,8 +158,8 @@ class GetRecordsFromJanrain:
     def fetchAllDataFromEntity(self, first_result, max_result, timeout, totalRecordsInJanrain, selectAttributes):
         """
         Returns all documents from janrain, only 10k documents you can retreive in one hit, we are fetching records by
-        sorting dcsId, and max timeout for API we declare as 60 seconds.
-        :param timeout: Api Call Timeout. Janrain max timeout is 120 seconds.
+        sorting uuid, and max timeout for API we declare as 60 seconds.
+        :param timeout: Api Call Timeout
         :param first_result: Starting Count of the record from where you will fetch the records.
         :param max_result: Max count that you can fetch records from janrain in one API hit. Default and max - 10K.
         :param totalRecordsInJanrain: Total Records in janrain.
@@ -169,13 +169,14 @@ class GetRecordsFromJanrain:
         print("Fetching records from Janrain API -> ", self.URL)
 
         attributes = json.dumps(selectAttributes)
+        TotalFetchedRecords = 0
 
         # Loop will run till first_result is less than totalRecordsInJanrain
         while first_result < totalRecordsInJanrain:
-            # Janrain API Query params, records fetched as sorted dcsId.
+            # Janrain API Query params, records fetched as sorted uuid.
             PARAMS = {'client_id': self.client_id, 'client_secret': self.client_secret, 'type_name': self.type_name,
                       'timeout': timeout, 'attributes': attributes, "first_result": first_result,
-                      "max_results": max_result, 'sort_on': '["dcsId"]'}
+                      "max_results": max_result, 'sort_on': '["uuid"]'}
 
             # Janrain API call
             try:
@@ -189,10 +190,12 @@ class GetRecordsFromJanrain:
 
             print("Logging RESPONSE --> ", response)
 
-            print("length of total fetched records counts -> ", len(response['results']))
+            fetchedRecordsLen = len(response['results'])
+
+            print("length of total fetched records counts -> ", fetchedRecordsLen)
 
             # Append result in CSV File
-            pd.DataFrame(response['results']).to_csv("AllRecordsFromEntity.csv", mode='a', index=False,
+            pd.DataFrame(response['results']).to_csv("Output/AllRecordsFromEntity.csv", mode='a', index=False,
                                                      header=False)
             # Increase the first_result counter to max fetched counts
             first_result += max_result
@@ -200,13 +203,21 @@ class GetRecordsFromJanrain:
             # This is counter that till now this much records are fetched, in case of any failure in API you can
             # again call the API with this counter
             print("Total fetched count -->  ", first_result)
+            TotalFetchedRecords += fetchedRecordsLen
         print("Fetching Completed")
+        Response = {
+            'Total_Record_Found_In_Janrain': {
+                'Count': TotalFetchedRecords,
+                'FileName': "AllRecordsFromEntity.csv"
+            }
+        }
+        return Response
 
     def fetchAllDataFromEntityWhereConditionIs(self, first_result, max_result, totalRecordsInJanrain, selectAttributes,
                                                queryFilter):
         """
         Returns all documents from janrain, only 10k documents you can retreive in one hit, we are fetching records by
-        sorting dcsId, and max timeout for API we declare as 60 seconds.
+        sorting uuid, and max timeout for API we declare as 60 seconds.
         :param queryFilter: Janrain filters for record fetch conditions.
         :param first_result: Starting Count of the record from where you will fetch the records.
         :param max_result: Max count that you can fetch records from janrain in one API hit. Default and max - 10K
@@ -218,10 +229,11 @@ class GetRecordsFromJanrain:
         print("Fetching records from Janrain API -> ", self.URL)
 
         attributes = json.dumps(selectAttributes)
+        TotalFetchedRecords = 0
 
         # Loop will run till first_result is less than totalRecordsInJanrain
         while first_result < totalRecordsInJanrain:
-            # Janrain API Query params, records fetched as sorted dcsId.
+            # Janrain API Query params, records fetched as sorted uuid.
             PARAMS = {'client_id': self.client_id, 'client_secret': self.client_secret, 'type_name': self.type_name,
                       'timeout': 120, 'attributes': attributes, "first_result": first_result,
                       "max_results": max_result, 'sort_on': '["uuid"]', 'filter': queryFilter}
@@ -237,19 +249,29 @@ class GetRecordsFromJanrain:
                 return
 
             print("RESPONSE --> ", response)
+            fetchedRecordsLen = len(response['results'])
 
-            print("length of total fetched counts -> ", len(response['results']))
+            print("length of total fetched counts -> ", fetchedRecordsLen)
 
             # Append result in CSV File
-            pd.DataFrame(response['results']).to_csv("JanrainDataHavingConditionIs.csv", mode='a', index=False,
+            pd.DataFrame(response['results']).to_csv("Output/JanrainDataHavingConditionIs.csv", mode='a', index=False,
                                                      header=False)
             # Increase the first_result counter to max fetched counts
             first_result += max_result
+
+            TotalFetchedRecords += fetchedRecordsLen
 
             # This is counter that till now this much records are fetched, in case of any failure in API you can again
             # call
             # the API with this counter
             print("Total fetched count -->  ", first_result)
         print("Fetching Completed")
+        Response = {
+            'Total_Record_Found_In_Janrain': {
+                'Count': TotalFetchedRecords,
+                'FileName': "JanrainDataHavingConditionIs.csv"
+            }
+        }
+        return Response
 
 

@@ -1,4 +1,3 @@
-# Required Imports
 import requests
 import pandas as pd
 from JanrainInternal.CommonMethods import CommonMethods
@@ -14,19 +13,22 @@ Note - Quotes are mandatory for Janrain API attributes,any changes in that can c
 
 class UpdateRecordsInJanrain():
 
-    def __init__(self, credentialsFileName):
+    def __init__(self, credentialsFilePath):
         """
-        Constructor takes CSV file name as parameter and reads the CSV file
-        :param credentialsFileName:
+        Constructor takes CSV file path as parameter, reads the CSV file and set the Janrain credentials
+        :param credentialsFilePath: CSV File path
         """
         print("Reading credentials From CSV")
-        credentialsData = pd.read_csv(credentialsFileName)
+        credentialsData = pd.read_csv(credentialsFilePath)
         self.client_id = credentialsData.client_id[0]
         self.client_secret = credentialsData.client_secret[0]
         self.URL = "https://" + credentialsData.url[0]
         self.type_name = credentialsData.type_name[0]
 
     def getCredentials(self):
+        """
+        :return: Janrain credentials
+        """
         response = {
             "client_id": self.client_id,
             "client_secret": self.client_secret,
@@ -35,23 +37,23 @@ class UpdateRecordsInJanrain():
         }
         return response
 
-    def updateRecords(self, key_attribute, update_attribute, recordsFileName, searchHeaderName, updateHeaderName):
+    def updateRecords(self, key_attribute, update_attribute, filePath, searchKeyHeaderName, updateHeaderName):
         """
         This function will update the users, and returns two CSV files. one is users successfully updated and other is if
         users is not found then it will be not update.
-        :rtype: None
-        :param updateHeaderName:
-        :param searchHeaderName:
-        :param update_attribute:
-        :param recordsFileName:
+        :rtype: JSON
+        :param updateHeaderName: CSV Header name
+        :param searchKeyHeaderName: CSV Header name using that records will be read for searching in Janrain
+        :param update_attribute: Field name that need to update in Janrain
+        :param filePath: CSV file path consists a records
         :param key_attribute: It is the attribute name of key, e.g - email,uuid.
-        :return: CSV Files of users updated and not updated
+        :return: JSON response of activity information
         """
 
-        print("Fetching records from Janrain API -> ", self.URL)
+        print("Updating records from Janrain API -> ", self.URL)
 
         # Read data from CSV file
-        FileData = pd.read_csv(recordsFileName)
+        FileData = pd.read_csv(filePath)
 
         # Array for storing the Output
         Records_Updated_Arr = []
@@ -64,7 +66,7 @@ class UpdateRecordsInJanrain():
 
         # This loop will iterate over the all CSV file data.
         for row in FileData.itertuples():
-            searchKey = getattr(row, searchHeaderName)
+            searchKey = getattr(row, searchKeyHeaderName)
             key_value = CommonMethods.typeConverter(searchKey)
 
             # Here we creating python dictonary for field that we want update
@@ -86,10 +88,10 @@ class UpdateRecordsInJanrain():
 
             print("API RESPONSE --> ", response)
             if response['stat'] == 'ok':
-                Records_Updated_Arr.append(row.key)
+                Records_Updated_Arr.append(searchKey)
                 RecordUpdatedCount += 1
             else:
-                Records_Not_Updated_Arr.append(row.key)
+                Records_Not_Updated_Arr.append(searchKey)
                 RecordFailCount += 1
             TotalCount += 1
             print("Total user done = ", TotalCount)
@@ -97,8 +99,8 @@ class UpdateRecordsInJanrain():
         print("Generating CSV Files...")
 
         # Writing CSV file with desired output.
-        pd.DataFrame(Records_Updated_Arr).to_csv("Janrain_records_updated.csv", index=False)
-        pd.DataFrame(Records_Not_Updated_Arr).to_csv("Janrain_records_not_updated.csv", index=False)
+        pd.DataFrame(Records_Updated_Arr).to_csv("Output/Janrain_records_updated.csv", index=False)
+        pd.DataFrame(Records_Not_Updated_Arr).to_csv("Output/Janrain_records_not_updated.csv", index=False)
 
         print("Execution Complete")
         Response = {
@@ -114,22 +116,22 @@ class UpdateRecordsInJanrain():
 
         return Response
 
-    def updateRecordsHavingValueIs(self, key_attribute, update_value, recordsFileName, searchHeaderName):
+    def updateRecordsHavingValueIs(self, key_attribute, update_values, filePath, searchKeyHeaderName):
         """
         This function will update the users, and returns two CSV files. one is users successfully updated and other is if
         users is not found then it will be not update.
-        :param update_value:
-        :rtype: None
-        :param searchHeaderName:
-        :param recordsFileName:
+        :param update_values: Array of static fields and values that have to update in Janrain
+        :param searchKeyHeaderName: CSV Header name using that records will be read for searching in Janrain
+        :param filePath: CSV file path consists a records
         :param key_attribute: It is the attribute name of key, e.g - email,uuid.
-        :return: CSV Files of users updated and not updated
+        :return: Response of activity information
+        :rtype: JSON
         """
 
-        print("Fetching records from Janrain API -> ", self.URL)
+        print("Updating records from Janrain API -> ", self.URL)
 
         # Read data from CSV file
-        FileData = pd.read_csv(recordsFileName)
+        FileData = pd.read_csv(filePath)
 
         # Array for storing the Output
         Records_Updated_Arr = []
@@ -142,26 +144,26 @@ class UpdateRecordsInJanrain():
 
         # This loop will iterate over the all CSV file data.
         for row in FileData.itertuples():
-            searchKey = getattr(row, searchHeaderName)
+            searchKey = getattr(row, searchKeyHeaderName)
             key_value = CommonMethods.typeConverter(searchKey)
 
             # Janrain Query params dictonary.
             PARAMS = {'client_id': self.client_id, 'client_secret': self.client_secret, 'key_attribute': key_attribute,
-                      'key_value': key_value,
-                      'type_name': self.type_name, "attributes": json.dumps(update_value)}
+                      'key_value': key_value,"timeout": 120,
+                      'type_name': self.type_name, "attributes": json.dumps(update_values)}
 
             # Janrain API call.
             try:
                 response = requests.get(url=self.URL + "/entity.update", params=PARAMS).json()
             except:
-                return "API call fail, please try again"
+                return "API call fail, please check your API configurations and  try again"
 
             print("API RESPONSE --> ", response)
             if response['stat'] == 'ok':
-                Records_Updated_Arr.append(row.key)
+                Records_Updated_Arr.append(searchKey)
                 RecordUpdatedCount += 1
             else:
-                Records_Not_Updated_Arr.append(row.key)
+                Records_Not_Updated_Arr.append(searchKey)
                 RecordFailCount += 1
             TotalCount += 1
             print("Total user done = ", TotalCount)
@@ -169,8 +171,8 @@ class UpdateRecordsInJanrain():
         print("Generating CSV Files...")
 
         # Writing CSV file with desired output.
-        pd.DataFrame(Records_Updated_Arr).to_csv("Janrain_records_updated.csv", index=False)
-        pd.DataFrame(Records_Not_Updated_Arr).to_csv("Janrain_records_not_updated.csv", index=False)
+        pd.DataFrame(Records_Updated_Arr).to_csv("Output/Janrain_records_updated.csv", index=False)
+        pd.DataFrame(Records_Not_Updated_Arr).to_csv("Output/Janrain_records_not_updated.csv", index=False)
 
         print("Execution Complete")
         Response = {
