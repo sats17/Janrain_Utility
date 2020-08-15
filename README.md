@@ -9,7 +9,7 @@ Simple script that will help you to perform bulk data operations on Janrain.
 ### Prerequisite
 ##### Language
 * Python 3
-##### Libraries
+##### Python Libraries
 * Pandas
 * Requests
 * Json
@@ -17,7 +17,7 @@ Simple script that will help you to perform bulk data operations on Janrain.
 * RecordsFilePath = CSV File that contains required records.
 * CredentialsFilePath = CSV File that contain your Janrain Credentials and entity related informations. (Required)
 
-##### Required fields for Credentials File. (Make sure your credentials CSV File header name should be same as below mentioned)
+##### Required fields for Credentials File. (Make sure your credentials CSV File header name should be same as mentioned below)
 * url : Janrain API URL
 * client_id : Janrain Client Id
 * client_secret : Janrain Client Secret
