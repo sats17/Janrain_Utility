@@ -20,10 +20,10 @@ class GetRecordsFromJanrain:
         """
         print("Reading credentials From CSV")
         credentialsData = pd.read_csv(credentialsFilePath)
-        self.client_id = credentialsData.client_id[0]
-        self.client_secret = credentialsData.client_secret[0]
-        self.URL = "https://" + credentialsData.url[0]
-        self.type_name = credentialsData.type_name[0]
+        self.client_id = credentialsData.client_id[0].strip()
+        self.client_secret = credentialsData.client_secret[0].strip()
+        self.URL = "https://" + credentialsData.url[0].strip()
+        self.type_name = credentialsData.type_name[0].strip()
 
     def getCredentials(self):
         """
@@ -64,12 +64,15 @@ class GetRecordsFromJanrain:
         # Returns a JSON object of the result
         jsonResponse = response.json()
         if jsonResponse['stat'] == 'ok':
-            print(jsonResponse)
             response = {'Message': 'Record found in Janrain', 'Response': jsonResponse['result']}
             return response
         else:
-            response = {'Message': 'Record not found in janrain'}
-            return response
+            if jsonResponse['error'] == 'record_not_found':
+                response = {'Error_Message': jsonResponse['error_description']}
+                return response
+            else:
+                response = {'Error_Message': jsonResponse['error_description']}
+                return response
 
     def selectMultipleRecordsBy(self, key_attribute, selectAttributes, timeout, searchKeyHeaderName, filePath):
         """
@@ -129,8 +132,12 @@ class GetRecordsFromJanrain:
                 """
                 If data not found in Janrain entity then we are appending Records_Not_Found_Arr with given input.
                 """
-                Records_Missing_Arr.append({'Missing_Records': csvKey})
-                RecordNotFoundCount += 1
+                if response['error'] == 'record_not_found':
+                    Records_Missing_Arr.append({'Missing_Records': csvKey})
+                    RecordNotFoundCount += 1
+                else:
+                    response = {'Error_Message': response['error_description']}
+                    return response
 
             TotalCount += 1
             print("Total users scanned - ", TotalCount)
@@ -185,11 +192,14 @@ class GetRecordsFromJanrain:
                 print("Error => API called failed, due to Timeout issue or any other failure.")
                 print("Length of total fetched records counts -> ", first_result)
                 print("You can again call method with first_result as this ", first_result, " this value")
-                print("Note => Increase ApiTimeout to 120 and decrese the max_result value, so API will run smoothly")
+                print("Note => Increase ApiTimeout to 120 and decrease the max_result value, so API will run smoothly")
                 return
 
             print("Logging RESPONSE --> ", response)
-
+            if response['stat'] != 'ok':
+                print("Please delete any generated files in Output folder")
+                response = {'Error_Message': response['error_description']}
+                return response
             fetchedRecordsLen = len(response['results'])
 
             print("length of total fetched records counts -> ", fetchedRecordsLen)
@@ -202,7 +212,7 @@ class GetRecordsFromJanrain:
 
             # This is counter that till now this much records are fetched, in case of any failure in API you can
             # again call the API with this counter
-            print("Total fetched count -->  ", first_result)
+            print("Total assumed count -->  ", first_result)
             TotalFetchedRecords += fetchedRecordsLen
         print("Fetching Completed")
         Response = {
@@ -249,6 +259,10 @@ class GetRecordsFromJanrain:
                 return
 
             print("RESPONSE --> ", response)
+            if response['stat'] != 'ok':
+                print("Please delete any generated files in Output folder")
+                response = {'Error_Message': response['error_description']}
+                return response
             fetchedRecordsLen = len(response['results'])
 
             print("length of total fetched counts -> ", fetchedRecordsLen)
@@ -273,5 +287,3 @@ class GetRecordsFromJanrain:
             }
         }
         return Response
-
-
