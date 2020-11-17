@@ -20,10 +20,10 @@ class UpdateRecordsInJanrain():
         """
         print("Reading credentials From CSV")
         credentialsData = pd.read_csv(credentialsFilePath)
-        self.client_id = credentialsData.client_id[0]
-        self.client_secret = credentialsData.client_secret[0]
-        self.URL = "https://" + credentialsData.url[0]
-        self.type_name = credentialsData.type_name[0]
+        self.client_id = credentialsData.client_id[0].strip()
+        self.client_secret = credentialsData.client_secret[0].strip()
+        self.URL = "https://" + credentialsData.url[0].strip()
+        self.type_name = credentialsData.type_name[0].strip()
 
     def getCredentials(self):
         """
